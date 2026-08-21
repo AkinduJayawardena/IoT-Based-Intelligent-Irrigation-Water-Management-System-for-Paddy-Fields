@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Irrigation Scheduler - Past 5 Days & Future 4 Days Chart</title>
+    <meta name="description"
+        content="A premium weather web application to visualize daily rainfall data for coordinates over a 10-day window using OpenWeather and Open-Meteo data APIs.">
+    <!-- FontAwesome for weather and UI icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <div class="app-container">
+
+        <!-- Premium App Header -->
+        <header class="app-header">
+            <h1 class="app-logo" id="main-title">
+                <i class="fa-solid fa-cloud-showers-water"></i>
+                Smart Irrigation Scheduler
+            </h1>
+            <p class="app-subtitle">Past 5 Days &amp; Future 4 Days Precipitation Analysis</p>
+        </header>
+
+        <!-- Layer 1: Input controls -->
+        <main class="glass-card screen active" id="input-screen">
+            <form id="weather-form" onsubmit="event.preventDefault();">
+
+                <div class="form-group-row">
+                    <!-- Latitude Input -->
+                    <div class="form-group">
+                        <label for="lat-input" class="form-label">
+                            <i class="fa-solid fa-location-crosshairs"></i> Latitude
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="lat-input" class="form-input" placeholder="e.g. 6.9271" step="any"
+                                min="-90" max="90" required>
+                            <i class="fa-solid fa-compass"></i>
+                        </div>
+                    </div>
+
+                    <!-- Longitude Input -->
+                    <div class="form-group">
+                        <label for="lon-input" class="form-label">
+                            <i class="fa-solid fa-location-crosshairs"></i> Longitude
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="lon-input" class="form-input form-input-with-helper"
+                                placeholder="e.g. 79.8612" step="any" min="-180" max="180" required>
+                            <i class="fa-solid fa-compass"></i>
+                            <!-- Geolocation Helper Button -->
+                            <button type="button" class="location-helper" id="btn-detect-location">
+                                <i class="fa-solid fa-location-arrow"></i>
+                                <span>My Location</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group-row">
+                    <!-- Soil Texture Selection -->
+                    <div class="form-group">
+                        <label for="soil-select" class="form-label">
+                            <i class="fa-solid fa-earth-americas"></i> Soil Texture
+                        </label>
+                        <div class="input-wrapper">
+                            <select id="soil-select" class="form-input" required>
+                                <option value="" disabled selected>Select soil texture...</option>
+                            </select>
+                            <i class="fa-solid fa-leaf"></i>
+                        </div>
+                    </div>
+
+                    <!-- Crop Type Selection -->
+                    <div class="form-group">
+                        <label for="crop-select" class="form-label">
+                            <i class="fa-solid fa-wheat-awn"></i> Crop Type
+                        </label>
+                        <div class="input-wrapper">
+                            <select id="crop-select" class="form-input" required>
+                                <option value="" disabled selected>Select crop type...</option>
+                            </select>
+                            <i class="fa-solid fa-seedling"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group-row">
+                    <!-- Field Area Input -->
+                    <div class="form-group">
+                        <label for="area-input" class="form-label">
+                            <i class="fa-solid fa-maximize"></i> Field Area (m²)
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="area-input" class="form-input" value="1000" min="1" required>
+                            <i class="fa-solid fa-chart-area"></i>
+                        </div>
+                    </div>
+
+                    <!-- Channel Efficiency Input -->
+                    <div class="form-group">
+                        <label for="efficiency-input" class="form-label">
+                            <i class="fa-solid fa-gauge-simple-high"></i> Channel Efficiency
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="efficiency-input" class="form-input" value="0.7" min="0.1" max="1.0" step="0.05" required>
+                            <i class="fa-solid fa-percent"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group-row">
+                    <!-- Planting Date Selection -->
+                    <div class="form-group">
+                        <label for="planting-date-input" class="form-label">
+                            <i class="fa-solid fa-calendar-plus"></i> Planting Date
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="date" id="planting-date-input" class="form-input" required>
+                            <i class="fa-solid fa-calendar-check"></i>
+                        </div>
+                    </div>
+
+                    <!-- Analysis Target Date -->
+                    <div class="form-group">
+                        <label for="date-input" class="form-label">
+                            <i class="fa-solid fa-calendar-days"></i> Analysis Target Date
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="date" id="date-input" class="form-input" required>
+                            <i class="fa-solid fa-calendar"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Confirm / Submit Button -->
+                <button type="submit" class="btn-primary" id="btn-confirm">
+                    <i class="fa-solid fa-chart-line"></i> Show Rainfall Analysis & Demand
+                </button>
+
+                <!-- Feedback messaging -->
+                <div class="status-msg error" id="form-error-msg">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span id="error-text">Please enter valid coordinates, area, and dates.</span>
+                </div>
+            </form>
+        </main>
+
+        <!-- Layer 2: Graph Dashboard (Initially Hidden) -->
+        <section class="glass-card screen" id="dashboard-screen">
+
+            <div class="dashboard-header">
+                <div class="dashboard-title-area">
+                    <h2 class="dashboard-title" id="dashboard-location-title">Rainfall Analysis</h2>
+                    <p class="dashboard-subtitle">
+                        <i class="fa-solid fa-calendar-day"></i>
+                        <span id="dashboard-date-range">June 2 - June 11, 2026</span>
+                    </p>
+                </div>
+                <div class="header-actions" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <!-- Demand Estimation Button -->
+                    <button class="btn-primary" id="btn-to-demand" style="width: auto; padding: 10px 18px; font-size: 0.9rem; margin: 0; box-shadow: none; border-radius: 10px; background: linear-gradient(135deg, #a78bfa, #6366f1);">
+                        <i class="fa-solid fa-droplet"></i> Demand Estimation
+                    </button>
+                    <!-- Field Properties Button -->
+                    <button class="btn-primary" id="btn-to-field" style="width: auto; padding: 10px 18px; font-size: 0.9rem; margin: 0; box-shadow: none; border-radius: 10px;">
+                        <i class="fa-solid fa-seedling"></i> Field Properties
+                    </button>
+                    <!-- Back Button -->
+                    <button class="btn-back" id="btn-back" style="margin: 0;">
+                        <i class="fa-solid fa-arrow-left"></i> Modify Inputs
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Stats Summary Grid -->
+            <div class="metrics-grid">
+                <!-- Stat 1: Total Rainfall -->
+                <div class="metric-card">
+                    <div class="metric-label">
+                        <i class="fa-solid fa-cloud-showers-heavy"></i> Total Rainfall
+                    </div>
+                    <div class="metric-value" id="metric-total-rain">0.0 mm</div>
+                    <div class="metric-desc">Sum over 10-day period</div>
+                </div>
+                <!-- Stat 2: Max Rainfall Day -->
+                <div class="metric-card accent-card">
+                    <div class="metric-label">
+                        <i class="fa-solid fa-cloud-rain"></i> Max Daily Rain
+                    </div>
+                    <div class="metric-value" id="metric-max-rain">0.0 mm</div>
+                    <div class="metric-desc" id="metric-max-rain-day">Date: N/A</div>
+                </div>
+                <!-- Stat 3: Weather Classification -->
+                <div class="metric-card">
+                    <div class="metric-label">
+                        <i class="fa-solid fa-umbrella"></i> Classification
+                    </div>
+                    <div class="metric-value" id="metric-status">Dry</div>
+                    <div class="metric-desc" id="metric-status-desc">Mostly clear days</div>
+                </div>
+            </div>
+
+            <!-- Chart Container -->
+            <div class="chart-container">
+                <canvas id="rainfall-chart"></canvas>
+            </div>
+
+            <!-- Interactive Day Selector Timeline -->
+            <div class="selector-section">
+                <h3 class="section-title"><i class="fa-solid fa-calendar-week"></i> Select a Day for Detailed Weather
+                    Analysis</h3>
+                <div class="timeline-tabs" id="timeline-tabs">
+                    <!-- Dynamic tabs injected by app.js -->
+                </div>
+            </div>
+
+            <!-- Layer 3: Detailed Meteorological Screen Skeletons -->
+            <div class="details-panel-container" id="details-panel-container" style="display: none;">
+                <div class="details-panel-header">
+                    <h3 class="details-panel-title" id="details-date-title">Detailed Weather Profile: Jun 07, 2026</h3>
+                    <span class="badge-elevation" id="details-elevation">
+                        <i class="fa-solid fa-mountain"></i> Elevation: Loading...
+                    </span>
+                </div>
+
+                <div class="details-grid">
+                    <!-- Temperature Card (Tmean, Tmax, Tmin) -->
+                    <div class="detail-card temp-card">
+                        <div class="detail-card-header">
+                            <span class="detail-card-label"><i class="fa-solid fa-temperature-three-quarters"></i>
+                                Temperature</span>
+                            <span class="detail-card-badge">Celsius (°C)</span>
+                        </div>
+                        <div class="detail-stats-row">
+                            <div class="detail-stat">
+                                <span class="stat-lbl">Mean</span>
+                                <span class="stat-val" id="det-temp-mean">-- °C</span>
+                            </div>
+                            <div class="detail-stat">
+                                <span class="stat-lbl">Max</span>
+                                <span class="stat-val" id="det-temp-max">-- °C</span>
+                            </div>
+                            <div class="detail-stat">
+                                <span class="stat-lbl">Min</span>
+                                <span class="stat-val" id="det-temp-min">-- °C</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Relative Humidity Card (RHmean, RHmax, RHmin) -->
+                    <div class="detail-card rh-card">
+                        <div class="detail-card-header">
+                            <span class="detail-card-label"><i class="fa-solid fa-droplet"></i> Relative Humidity</span>
+                            <span class="detail-card-badge">Percentage (%)</span>
+                        </div>
+                        <div class="detail-stats-row">
+                            <div class="detail-stat">
+                                <span class="stat-lbl">Mean</span>
+                                <span class="stat-val" id="det-rh-mean">-- %</span>
+                            </div>
+                            <div class="detail-stat">
+                                <span class="stat-lbl">Max</span>
+                                <span class="stat-val" id="det-rh-max">-- %</span>
+                            </div>
+                            <div class="detail-stat">
+                                <span class="stat-lbl">Min</span>
+                                <span class="stat-val" id="det-rh-min">-- %</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Wind Speed Card (windMean, windMax, windMin) -->
+                    <div class="detail-card wind-card">
+                        <div class="detail-card-header">
+                            <span class="detail-card-label"><i class="fa-solid fa-wind"></i> Wind Speed (u10)</span>
+                            <span class="detail-card-badge">Meters/Second (m/s)</span>
+                        </div>
+                        <div class="detail-stats-row">
+                            <div class="detail-stat">
+                                <span class="stat-lbl">Mean</span>
+                                <span class="stat-val" id="det-wind-mean">-- m/s</span>
+                            </div>
+                            <div class="detail-stat">
+                                <span class="stat-lbl">Max</span>
+                                <span class="stat-val" id="det-wind-max">-- m/s</span>
+                            </div>
+                            <div class="detail-stat">
+                                <span class="stat-lbl">Min</span>
+                                <span class="stat-val" id="det-wind-min">-- m/s</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rainfall Card (rain, rainMean, rainMax, rainMin) -->
+                    <div class="detail-card rain-card">
+                        <div class="detail-card-header">
+                            <span class="detail-card-label"><i class="fa-solid fa-cloud-showers-heavy"></i>
+                                Rainfall</span>
+                            <span class="detail-card-badge">Precipitation (mm)</span>
+                        </div>
+                        <div class="detail-stats-row">
+                            <div class="detail-stat">
+                                <span class="stat-lbl">Daily Total</span>
+                                <span class="stat-val" id="det-rain-sum">-- mm</span>
+                            </div>
+                            <div class="detail-stat">
+                                <span class="stat-lbl">Mean</span>
+                                <span class="stat-val" id="det-rain-mean">-- mm</span>
+                            </div>
+                            <div class="detail-stat">
+                                <span class="stat-lbl">Max</span>
+                                <span class="stat-val" id="det-rain-max">-- mm</span>
+                            </div>
+                            <div class="detail-stat">
+                                <span class="stat-lbl">Min</span>
+                                <span class="stat-val" id="det-rain-min">-- mm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data sources credentials and attribution -->
+            <footer class="sources-footer">
+                <div>
+                    Coordinates: <span id="lbl-coordinates" style="color: var(--text-primary); font-weight: 500;">0,
+                        0</span>
+                </div>
+                <div class="source-badges">
+                    <span class="badge openweather"><i class="fa-solid fa-key"></i> OpenWeather Forecast</span>
+                    <span class="badge openmeteo"><i class="fa-solid fa-database"></i> Open-Meteo Archive</span>
+                </div>
+            </footer>
+        </section>
+
+        <!-- Layer 3: Field Properties Screen (Initially Hidden) -->
+        <section class="glass-card screen" id="field-screen">
+            <div class="dashboard-header">
+                <div class="dashboard-title-area">
+                    <h2 class="dashboard-title"><i class="fa-solid fa-seedling"></i> Field Properties</h2>
+                    <p class="dashboard-subtitle">
+                        <span id="field-soil-crop-label">Soil: Sand | Crop: Cotton</span>
+                    </p>
+                </div>
+                <div class="header-actions" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <!-- Demand Estimation Button -->
+                    <button class="btn-primary" id="btn-field-to-demand" style="width: auto; padding: 10px 18px; font-size: 0.9rem; margin: 0; box-shadow: none; border-radius: 10px; background: linear-gradient(135deg, #a78bfa, #6366f1);">
+                        <i class="fa-solid fa-droplet"></i> Demand Estimation
+                    </button>
+                    <!-- Back to Dashboard -->
+                    <button class="btn-primary" id="btn-back-to-dashboard" style="width: auto; padding: 10px 18px; font-size: 0.9rem; margin: 0; box-shadow: none; border-radius: 10px;">
+                        <i class="fa-solid fa-chart-column"></i> Rainfall Dashboard
+                    </button>
+                    <!-- Back to Input Screen -->
+                    <button class="btn-back" id="btn-back-to-inputs" style="margin: 0;">
+                        <i class="fa-solid fa-arrow-left"></i> Modify Inputs
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Sensor Telemetry Section -->
+            <div class="telemetry-section" style="margin-bottom: 32px; border-bottom: 1px solid var(--card-border); padding-bottom: 24px;">
+                <h3 class="section-title"><i class="fa-solid fa-tower-broadcast" style="color: var(--accent); filter: drop-shadow(0 0 8px var(--accent));"></i> Live Sensor Telemetry</h3>
+                <div class="metrics-grid telemetry-grid">
+                    <!-- Live Soil Moisture Card -->
+                    <div class="metric-card telemetry-card moisture-card">
+                        <div class="metric-label">
+                            <i class="fa-solid fa-droplet" style="color: var(--rain);"></i> Live Soil Moisture
+                        </div>
+                        <div class="metric-value" id="live-moisture-val">--%</div>
+                        <div class="metric-desc">Real-time soil moisture percentage</div>
+                    </div>
+                    <!-- Temperature Card -->
+                    <div class="metric-card telemetry-card temp-card">
+                        <div class="metric-label">
+                            <i class="fa-solid fa-temperature-half" style="color: #f59e0b;"></i> Temperature
+                        </div>
+                        <div class="metric-value" id="live-temp-val">--°C</div>
+                        <div class="metric-desc">Ambient temperature reading</div>
+                    </div>
+                    <!-- Water Level Card -->
+                    <div class="metric-card telemetry-card water-card">
+                        <div class="metric-label">
+                            <i class="fa-solid fa-ruler-vertical" style="color: var(--accent);"></i> Water Level
+                        </div>
+                        <div class="metric-value" id="live-water-val">-- cm</div>
+                        <div class="metric-desc">Irrigation water level status</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="section-title"><i class="fa-solid fa-gears"></i> Soil & Crop Thresholds</h3>
+            <div class="metrics-grid">
+                <!-- Stat 1: Field Capacity -->
+                <div class="metric-card">
+                    <div class="metric-label">
+                        <i class="fa-solid fa-droplet"></i> Field Capacity (FC)
+                    </div>
+                    <div class="metric-value" id="field-fc-val">0.0%</div>
+                    <div class="metric-desc">Max water held in soil</div>
+                </div>
+                <!-- Stat 2: Permanent Wilting Point -->
+                <div class="metric-card">
+                    <div class="metric-label">
+                        <i class="fa-solid fa-droplet-slash"></i> Wilting Point (PWP)
+                    </div>
+                    <div class="metric-value" id="field-pwp-val">0.0%</div>
+                    <div class="metric-desc">Min water soil holds before wilting</div>
+                </div>
+                <!-- Stat 3: Moisture Threshold Level -->
+                <div class="metric-card accent-card">
+                    <div class="metric-label">
+                        <i class="fa-solid fa-gauge-high"></i> Moisture Threshold
+                    </div>
+                    <div class="metric-value" id="field-threshold-val">0.0%</div>
+                    <div class="metric-desc" id="field-mad-desc">MAD: 0.00</div>
+                </div>
+            </div>
+
+            <!-- Visualizer Gauge/Bar -->
+            <div class="threshold-visualizer-container" style="background: rgba(10, 12, 30, 0.3); border: 1px solid var(--card-border); border-radius: 16px; padding: 24px; margin-top: 24px;">
+                <h3 class="section-title" style="margin-top: 0; border: none; padding: 0;"><i class="fa-solid fa-water"></i> Soil Moisture Spectrum</h3>
+                <div class="moisture-bar-wrapper" style="position: relative; height: 24px; background: rgba(255,255,255,0.05); border-radius: 12px; margin: 30px 0 15px 0; border: 1px solid var(--card-border); overflow: visible;">
+                    <!-- Colored zones -->
+                    <div id="visual-wilting-zone" style="position: absolute; left: 0; top: 0; bottom: 0; width: 20%; background: rgba(239, 68, 68, 0.35); border-radius: 11px 0 0 11px;" title="Wilting Zone"></div>
+                    <div id="visual-depletion-zone" style="position: absolute; left: 20%; top: 0; bottom: 0; width: 30%; background: rgba(245, 158, 11, 0.3);" title="Management Depletion Zone"></div>
+                    <div id="visual-optimal-zone" style="position: absolute; left: 50%; top: 0; bottom: 0; right: 0; background: rgba(16, 185, 129, 0.35); border-radius: 0 11px 11px 0;" title="Optimal Moisture Zone"></div>
+                    
+                    <!-- Markers -->
+                    <div class="moisture-marker" id="marker-pwp" style="position: absolute; left: 20%; top: -20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">PWP</span>
+                        <div style="width: 2px; height: 32px; background: #ef4444;"></div>
+                    </div>
+                    <div class="moisture-marker" id="marker-threshold" style="position: absolute; left: 50%; top: -20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 10;">
+                        <span style="font-size: 0.75rem; color: var(--accent); font-weight: 700; background: var(--bg-start); padding: 0 4px; border-radius: 4px; border: 1px solid var(--accent);">Threshold</span>
+                        <div style="width: 2px; height: 32px; background: var(--accent);"></div>
+                    </div>
+                    <div class="moisture-marker" id="marker-fc" style="position: absolute; left: 100%; top: -20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center;">
+                        <span style="font-size: 0.75rem; color: var(--success); font-weight: 600;">FC</span>
+                        <div style="width: 2px; height: 32px; background: #10b981;"></div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); padding: 0 4px;">
+                    <span>0% (Dry)</span>
+                    <span id="label-visual-pwp">PWP: 0%</span>
+                    <span id="label-visual-threshold" style="color: var(--accent); font-weight: 600;">Threshold: 0%</span>
+                    <span id="label-visual-fc">FC: 0%</span>
+                    <span>100% (Saturated)</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Layer 4: Demand Estimation Screen (Initially Hidden) -->
+        <section class="glass-card screen" id="demand-screen">
+            <div class="dashboard-header">
+                <div class="dashboard-title-area">
+                    <h2 class="dashboard-title"><i class="fa-solid fa-droplet"></i> Demand Estimation</h2>
+                    <p class="dashboard-subtitle">
+                        <span id="demand-summary-label">5-Day Irrigation Water Requirement Forecast</span>
+                    </p>
+                </div>
+                <div class="header-actions" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <!-- Back to Dashboard -->
+                    <button class="btn-primary" id="btn-demand-to-dashboard" style="width: auto; padding: 10px 18px; font-size: 0.9rem; margin: 0; box-shadow: none; border-radius: 10px;">
+                        <i class="fa-solid fa-chart-column"></i> Rainfall Dashboard
+                    </button>
+                    <!-- Back to Field Properties -->
+                    <button class="btn-primary" id="btn-demand-to-field" style="width: auto; padding: 10px 18px; font-size: 0.9rem; margin: 0; box-shadow: none; border-radius: 10px;">
+                        <i class="fa-solid fa-seedling"></i> Field Properties
+                    </button>
+                    <!-- Back to Input Screen -->
+                    <button class="btn-back" id="btn-demand-to-inputs" style="margin: 0;">
+                        <i class="fa-solid fa-arrow-left"></i> Modify Inputs
+                    </button>
+                </div>
+            </div>
+
+            <!-- Status Indicator for Server vs Fallback -->
+            <div class="status-indicator-bar" id="demand-status-bar" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 0.9rem;">
+                <span class="status-badge" id="demand-backend-status" style="padding: 4px 12px; border-radius: 20px; font-weight: bold; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981;">
+                    <i class="fa-solid fa-server"></i> Python Backend Online
+                </span>
+                <span id="demand-elevation-label" style="color: var(--text-muted); font-weight: 500;">
+                    <i class="fa-solid fa-mountain"></i> Elevation: -- m
+                </span>
+            </div>
+
+            <!-- Demand Estimation Grid or Table -->
+            <div class="demand-table-container" style="background: rgba(10, 12, 30, 0.3); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; overflow-x: auto; margin-top: 15px;">
+                <table class="demand-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted);">
+                            <th style="padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1);">Date</th>
+                            <th style="padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1);">Days after Planting</th>
+                            <th style="padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1);">Kc</th>
+                            <th style="padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1);">Crop Water Req. (CWR)</th>
+                            <th style="padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1);">Evaporation (ET0)</th>
+                            <th style="padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1);">Rainfall</th>
+                            <th style="padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); text-align: right; color: var(--accent);">Est. Irrigation Demand</th>
+                        </tr>
+                    </thead>
+                    <tbody id="demand-table-body">
+                        <!-- Dynamic rows injected by app.js -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 5-Day Cards view for mobile responsiveness -->
+            <div class="demand-cards-container" id="demand-cards-container" style="margin-top: 20px; display: none; flex-direction: column; gap: 12px;">
+                <!-- Responsive card list injected by app.js -->
+            </div>
+        </section>
+
+        <!-- Page Footer credits -->
+        <footer class="app-credits">
+            Developed utilizing the OpenWeather Map API. View source on local deployment.
+        </footer>
+
+    </div>
+
+    <!-- Chart.js library loaded via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Core Application Logic -->
+    <script src="app.js"></script>
+</body>
+
+</html>
