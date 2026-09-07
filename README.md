@@ -1,6 +1,6 @@
 # Smart Irrigation Scheduler
 
-An AI-powered Water Management System for agricultural purposes in Sri Lanka. This web application provides a premium dashboard to visualize precipitation, calculate irrigation demand, and integrate with hardware (ESP32) for smart farming.
+An IoT-Based Intelligent Irrigation Water Management System for Paddy Fields in Sri Lanka. This web application provides a premium dashboard to visualize precipitation, calculate irrigation demand, and integrate with hardware (ESP32) for smart farming.
 
 **🔗 Live Demo:** [https://smart-irrigation-schedul-d2add.web.app/](https://smart-irrigation-schedul-d2add.web.app/)
 
